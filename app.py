@@ -1,8 +1,18 @@
 import streamlit as st
-import pandas as pd
 
 from utils.data_loader import load_file
-from agents.dataset_agent import generate_dataset_summary
+
+from agents.dataset_agent import (
+    generate_dataset_summary
+)
+
+from agents.feature_agent import (
+    identify_business_features
+)
+
+from dashboard.charts import (
+    create_column_type_chart
+)
 
 st.set_page_config(
     page_title="AI Business Intelligence Platform",
@@ -10,14 +20,16 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("📊 AI Business Intelligence Platform")
+st.title(
+    "📊 AI Business Intelligence Platform"
+)
 
 st.markdown(
-    "Upload business datasets and generate insights."
+    "Dynamic Business Intelligence using AI Agents"
 )
 
 uploaded_file = st.file_uploader(
-    "Upload CSV or Excel File",
+    "Upload Dataset",
     type=["csv", "xlsx"]
 )
 
@@ -25,19 +37,40 @@ if uploaded_file:
 
     df = load_file(uploaded_file)
 
-    st.success("Dataset Loaded Successfully")
+    summary = generate_dataset_summary(df)
 
-    tab1, tab2, tab3 = st.tabs(
-        [
-            "Preview",
-            "Statistics",
-            "Dataset Agent"
-        ]
+    features = identify_business_features(df)
+
+    st.sidebar.header(
+        "Dataset Overview"
     )
+
+    st.sidebar.metric(
+        "Rows",
+        summary["rows"]
+    )
+
+    st.sidebar.metric(
+        "Columns",
+        summary["columns"]
+    )
+
+    st.sidebar.metric(
+        "Completeness %",
+        summary["completeness_score"]
+    )
+
+    tab1, tab2, tab3 = st.tabs([
+        "Dataset",
+        "Feature Agent",
+        "Dashboard"
+    ])
 
     with tab1:
 
-        st.subheader("Dataset Preview")
+        st.subheader(
+            "Dataset Preview"
+        )
 
         st.dataframe(
             df.head(20),
@@ -46,40 +79,16 @@ if uploaded_file:
 
     with tab2:
 
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.metric(
-                "Rows",
-                df.shape[0]
-            )
-
-        with col2:
-            st.metric(
-                "Columns",
-                df.shape[1]
-            )
-
-        st.subheader("Column Names")
-
-        st.write(
-            list(df.columns)
-        )
-
-    with tab3:
-
-        summary = generate_dataset_summary(df)
-
         st.subheader(
-            "Dataset Understanding Agent"
+            "Feature Selection Agent"
+        )
+
+        st.success(
+            "Recommended Features for Analysis"
         )
 
         st.write(
-            f"Rows: {summary['rows']}"
-        )
-
-        st.write(
-            f"Columns: {summary['columns']}"
+            features["recommended_features"]
         )
 
         st.subheader(
@@ -87,7 +96,7 @@ if uploaded_file:
         )
 
         st.write(
-            summary["numerical_columns"]
+            features["numerical_columns"]
         )
 
         st.subheader(
@@ -95,13 +104,21 @@ if uploaded_file:
         )
 
         st.write(
-            summary["categorical_columns"]
+            features["categorical_columns"]
         )
+
+    with tab3:
 
         st.subheader(
-            "Missing Values"
+            "Dataset Dashboard"
         )
 
-        st.dataframe(
-            summary["missing_values"]
+        fig = create_column_type_chart(
+            len(features["numerical_columns"]),
+            len(features["categorical_columns"])
+        )
+
+        st.plotly_chart(
+            fig,
+            use_container_width=True
         )
